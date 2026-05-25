@@ -16,8 +16,12 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: false, 
+    required: false,
     minlength: 6
+  },
+  phone: {
+    type: Number,
+    default: ''   // ✅ নতুন
   },
   role: {
     type: String,
@@ -26,11 +30,11 @@ const userSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    default: null  
+    default: null
   },
   avatar: {
     type: String,
-    default: ''    
+    default: ''
   },
   address: {
     street: { type: String, default: '' },
@@ -42,7 +46,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  if (!this.password) return next(); 
+  if (!this.password) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();

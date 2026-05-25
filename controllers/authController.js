@@ -28,6 +28,7 @@ const registerUser = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         address: user.address,
         token: generateToken(user._id)
@@ -50,6 +51,7 @@ const loginUser = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         address: user.address,
         token: generateToken(user._id)
@@ -68,6 +70,7 @@ const getMe = async (req, res, next) => {
       _id: req.user._id,
       name: req.user.name,
       email: req.user.email,
+      phone: req.user.phone,
       role: req.user.role,
       address: req.user.address
     });
@@ -87,6 +90,7 @@ const googleAuth = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         address: user.address,
         token: generateToken(user._id)
@@ -104,6 +108,7 @@ const googleAuth = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         address: user.address,
         token: generateToken(user._id)
@@ -114,4 +119,86 @@ const googleAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getMe, googleAuth };
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name, phone, address } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (address) user.address = { ...user.address, ...address };
+
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      role: updatedUser.role,
+      address: updatedUser.address,
+      token: generateToken(updatedUser._id)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updatePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        message: 'Please provide current and new password' 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        message: 'New password must be at least 6 characters' 
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Google user check
+    if (!user.password || user.googleId) {
+      return res.status(400).json({ 
+        message: 'Google users cannot change password here' 
+      });
+    }
+
+    // Current password check
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ 
+        message: 'Current password is incorrect' 
+      });
+    }
+
+    // Set new password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getMe,
+  googleAuth,
+  updateProfile,
+  updatePassword
+};
